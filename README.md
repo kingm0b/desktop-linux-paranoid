@@ -1,4 +1,4 @@
-![cyberpunk](https://image.ibb.co/d72MDJ/Screenshot_2018_06_03_20_45_18.png)
+![cyberpunk](https://image.ibb.co/k0FPYJ/cyberpunk.png)
 
 
 Particionamento EFI:
