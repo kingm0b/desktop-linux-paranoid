@@ -1,3 +1,6 @@
+![cyberpunk](https://image.ibb.co/d72MDJ/Screenshot_2018_06_03_20_45_18.png)
+
+
 Particionamento EFI:
 ```
 # parted -a optimal /dev/sda
