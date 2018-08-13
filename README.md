@@ -18,6 +18,8 @@ Particionamento EFI:
  (parted) set 2 lvm on
 ```
 
+
+Criando disco criptografado:
 ```
  # cryptsetup luksFormat -c aes-xts-plain64 -s 512 /dev/sda2 --debug
  # cryptsetup luksOpen /dev/sda2 crypt_disc --debug
