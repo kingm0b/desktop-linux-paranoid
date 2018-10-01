@@ -1,7 +1,20 @@
 ![cyberpunk](https://image.ibb.co/k0FPYJ/cyberpunk.png)
 
 
+## Preparando disco
+
+Particionamento MBR:
+
+```
+# fdisk /dev/sda
+Command (m for help): d
+Command (m for help): n
+Command (m for help): p
+Command (m for help): w
+```
+
 Particionamento EFI:
+
 ```
 # parted -a optimal /dev/sda
  (parted) print
@@ -18,10 +31,16 @@ Particionamento EFI:
  (parted) set 2 lvm on
 ```
 
+Formate o disco aplicando criptografia:
 
-Criando disco criptografado:
 ```
  # cryptsetup luksFormat -c aes-xts-plain64 -s 512 /dev/sda2 --debug
+ (defina uma senha)
+```
+
+Abra o disco criptografado para posterior particionamento LVM:
+
+```
  # cryptsetup luksOpen /dev/sda2 crypt_disc --debug
 ```
 
@@ -42,13 +61,13 @@ Configuração LVM:
 # vgchange -a y vg_01
 ```
 
-Formatação:
+Formatação (EFI):
 
 ```
  # mkfs.vfat -F 32 /dev/sda1
  # mkfs.ext4 /dev/vg_01/rootfs
- # mkfs.ext4 /dev/vg_01/var
- # mkfs.btrfs /dev/vg_01/home
+ # mkfs.btrfs /dev/vg_01/var
+ # mkfs.ext4 /dev/vg_01/home
 ```
 
 Montando dispositivos:
@@ -65,14 +84,20 @@ Entrando no diretório e baixando o Stage3:
 
 ```
  # cd /mnt/gentoo/
- # wget http://gentoo.c3sl.ufpr.br/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-20180322T214502Z.tar.xz
+ # wget http://gentoo.c3sl.ufpr.br/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-20180927T214502Z.tar.xz
  # tar xvpf stage3-* --xattrs-include='*.*' --numeric-owner
 ```
+
+*Observação*: quase todos os dias uma nova versão do stage3 é lançada! Acesse primeiro http://gentoo.c3sl.ufpr.br/releases/amd64/autobuilds/current-stage3-amd64/ e baixe sempre a mais recente!
+
+*Observação2*: certa vez, a versão do stage3 que estava disponível apresentava dependências circulares ao instalar a glibc. Se na instalação alguns problemas super-estranhos começarem a ocorrer, aguarde uma nova versão do stage3 para download.
+
 
 Ajustes iniciais nas configurações do Portage:
 
 ```
  # nano -w /mnt/gentoo/etc/portage/make.conf
+```
 
 ----------- insira isto ----------------
 CHOST="x86_64-pc-linux-gnu"
@@ -82,7 +107,6 @@ MAKEOPTS="-j4"
 
 USE="cryptsetup"
 ----------- insira isto ----------------
-```
 
 Informações sobre flags: https://wiki.gentoo.org/wiki/Safe_CFLAGS
 
@@ -94,6 +118,7 @@ Informações sobre flags: https://wiki.gentoo.org/wiki/Safe_CFLAGS
 ```
 
 Montando pseudo-filesystems:
+
 ```
  # mount --types proc /proc /mnt/gentoo/proc; mount --rbind /sys /mnt/gentoo/sys; mount --make-rslave /mnt/gentoo/sys; mount --rbind /dev /mnt/gentoo/dev; mount --make-rslave /mnt/gentoo/dev
 ```
@@ -109,13 +134,15 @@ Sincronizando repositório, setando profile, definindo timezone e idioma:
 
 ```
  # emerge-webrsync
- # eselect profile set default/linux/amd64/17.0/desktop/gnome/systemd
+ # eselect profile set hardened/linux/amd64/selinux
  # echo "Brazil/East" > /etc/timezone
  # emerge --config sys-libs/timezone-data
- # eselect locale list # opcional
- # eselect locale set 593
+ # eselect locale list # verifique a linguagem
+ # eselect locale set 601 # escolha pt_BR.utf8
  # env-update && source /etc/profile && export PS1="(chroot) $PS1"
 ```
+
+Observação: no processo de configuração, é normal mensagens como "SELinux module not found".
 
 Baixando source do kernel e compilando:
 
@@ -137,22 +164,25 @@ Gerando initramfs:
 ```
 
 /etc/fstab:
-```
 ----------- insira isto ----------------
 UUID=6C0D-4530          /boot	        vfat            noauto,noatime	0 2
 UUID=14aa64ea-a2fb-4b77-be9d-1d61faeeac1a	/	ext4	noatime	0 1
 UUID=36a8cd7c-3fb7-4766-b3d8-1664031d2195	/var	ext4	noatime 0 2
 UUID=b6584762-0904-45d1-92ab-b2848b538cea	/home	btrfs	noatime 0 2
 ----------- insira isto ----------------
-```
-
-```
- # systemctl enable lvm2-monitor
-```
 
 Aplicações:
+
 ```
- # emerge --ask net-wireless/iw net-wireless/wpa_supplicant sys-fs/e2fsprogs sys-fs/btrfs-progs sys-process/cronie app-admin/syslog-ng net-misc/dhcpcd vim sys-kernel/linux-firmware
+ # emerge --ask net-wireless/iw \
+    net-wireless/wpa_supplicant \
+    sys-fs/e2fsprogs \
+    sys-fs/btrfs-progs \
+    sys-process/cronie \
+    app-admin/syslog-ng \
+    net-misc/dhcpcd \
+    vim \
+    sys-kernel/linux-firmware
 ```
 
 Instalando e configurando GRUB2 EFI:
@@ -183,15 +213,23 @@ Saindo do chroot e desmontando
  # reboot
 ```
 
+Instale os componentes base do SELinux, antes de proceder com a instalação dos outros componentes:
+
 ```
-nano -w /mnt/gentoo/etc/portage/make.conf
+ # FEATURES="-selinux" emerge -1 selinux-base
+```
+
+Configuração de vídeo /etc/selinux/config.
+
+```
+ # nano -w /mnt/gentoo/etc/portage/make.conf
+```
 
 ---------------------------------------------------------
 ## (For mouse, keyboard, and Synaptics touchpad support)
 INPUT_DEVICES="libinput synaptics"
 VIDEO_CARDS="intel"
 ---------------------------------------------------------
-```
 
 ```
  # emerge --ask --verbose x11-base/xorg-drivers
@@ -204,11 +242,9 @@ VIDEO_CARDS="intel"
 ```
 
 Acrescentar as seguintes flags:
-```
 ---------------------------------------------------------
-USE="X gtk dbus policykit alsa acl apm acpi hardened -kde -qt4 -qt5"
+USE="X gtk dbus policykit alsa acl apm acpi hardened pulseaudio -kde -qt4 -qt5"
 ---------------------------------------------------------
-```
 
 Instalando o D-Bus:
 
@@ -217,28 +253,96 @@ Instalando o D-Bus:
 ```
 
 Definir no make.conf
-
-```
 ---------------------------------------------------------
 XFCE_PLUGINS="brightness clock trash"
 ---------------------------------------------------------
-```
+
 ```
  # eselect profile set default/linux/amd64/17.0/desktop
  # emerge --ask xfce-base/xfce4-meta
- # for x in cdrom cdrw usb ; do gpasswd -a kingm0b_ $x ; done
+ # for x in cdrom cdrw usb ; do gpasswd -a <seu usuário> $x ; done
  # env-update && source /etc/profile
  # emerge --ask x11-terms/xfce4-terminal
- # su seu_usuario -c "echo \"exec startxfce4\" > ~/.xinitrc"
- # emerge --ask x11-themes/xfwm4-themes app-editors/mousepad xfce-extra/xfce4-power-manager xfce-extra/tumbler xfce-extra/thunar-volman www-client/firefox
+ # su kingm0b_ -c "echo \"exec startxfce4\" > ~/.xinitrc"
+ # emerge --ask x11-themes/xfwm4-themes \
+    app-editors/mousepad \
+    xfce-extra/xfce4-power-manager \
+    xfce-extra/tumbler \
+    xfce-extra/thunar-volman \
+    www-client/firefox
  # rc-update add dbus default
 ```
 
 Instalar Display Manager:
 
 ```
- # emerge --ask x11-misc/lightdm
+ # USE="gtk" emerge --ask x11-misc/lightdm
+```
+
+  Edite o arquivo: /etc/conf.d/xdm
+
+  DISPLAYMANAGER="lightdm"
+
+```
+ # rc-update add dbus default
+ # rc-update add xdm default
+```
+
+Adicione seu usuário no grupo 'audio':
+
+```
+ # lspci
+ # aplay -L
+ # ls -l /dev/snd/
+ # usermod -aG audio <seu usuario>
 ```
 
 https://wiki.gentoo.org/wiki/Udisks
 https://wiki.gentoo.org/wiki/LightDM
+
+
+Definir o hostname:
+ /etc/hosts:
+ # IPv4 and IPv6 localhost aliases
+ 127.0.0.1	gentoo.local gentoo localhost
+ ::1		gentoo.local gentoo localhost
+
+ /etc/conf.d/hostname:
+ # Set to the hostname of this machine
+ hostname="gentoo"
+
+ cat /etc/hostname:
+ gentoo
+
+
+Configuracoes de teclado:
+
+```
+ # vim /etc/conf.d/keymaps
+ keymap=br-abnt2
+
+ # rc-update add keymaps boot
+```
+
+ Vá nas configurações do teclado para configurar o idioma (teclado genérico 105 teclas Brasil).
+
+
+Gerenciador de som no painel XFCE:
+
+```
+ # emerge --ask xfce-extra/xfce4-pulseaudio-plugin \
+    xfce-extra/xfce4-screenshooter \
+    xfce-extra/thunar-archive-plugin \
+    app-arch/xarchiver
+```
+
+Alterar plano de fundo lightdm:
+
+```
+ # vim /etc/lightdm/lightdm-gtk-greeter.conf
+```
+
+
+
+
+
