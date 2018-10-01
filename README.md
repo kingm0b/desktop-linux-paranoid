@@ -1,6 +1,8 @@
 ![cyberpunk](https://image.ibb.co/k0FPYJ/cyberpunk.png)
 
 
+### Roteiro de instalação do Gentoo
+
 ## Preparando disco
 
 Particionamento MBR:
@@ -80,6 +82,8 @@ Montando dispositivos:
  # mount /dev/sda1 /mnt/gentoo/boot
 ```
 
+## Instalando o Stage3
+
 Entrando no diretório e baixando o Stage3:
 
 ```
@@ -88,9 +92,9 @@ Entrando no diretório e baixando o Stage3:
  # tar xvpf stage3-* --xattrs-include='*.*' --numeric-owner
 ```
 
-*Observação*: quase todos os dias uma nova versão do stage3 é lançada! Acesse primeiro http://gentoo.c3sl.ufpr.br/releases/amd64/autobuilds/current-stage3-amd64/ e baixe sempre a mais recente!
+**Observação**: quase todos os dias uma nova versão do stage3 é lançada! Acesse primeiro http://gentoo.c3sl.ufpr.br/releases/amd64/autobuilds/current-stage3-amd64/ e baixe sempre a mais recente!
 
-*Observação2*: certa vez, a versão do stage3 que estava disponível apresentava dependências circulares ao instalar a glibc. Se na instalação alguns problemas super-estranhos começarem a ocorrer, aguarde uma nova versão do stage3 para download.
+**Observação2**: certa vez, a versão do stage3 que estava disponível apresentava dependências circulares ao instalar a glibc. Se na instalação alguns problemas super-estranhos começarem a ocorrer, aguarde uma nova versão do stage3 para download.
 
 
 Ajustes iniciais nas configurações do Portage:
@@ -99,6 +103,7 @@ Ajustes iniciais nas configurações do Portage:
  # nano -w /mnt/gentoo/etc/portage/make.conf
 ```
 
+```
 ----------- insira isto ----------------
 CHOST="x86_64-pc-linux-gnu"
 CFLAGS="-march=sandybridge -O2 -pipe"
@@ -107,6 +112,7 @@ MAKEOPTS="-j4"
 
 USE="cryptsetup"
 ----------- insira isto ----------------
+```
 
 Informações sobre flags: https://wiki.gentoo.org/wiki/Safe_CFLAGS
 
@@ -163,13 +169,16 @@ Gerando initramfs:
  # genkernel --luks --udev --lvm initramfs
 ```
 
-/etc/fstab:
+**/etc/fstab**:
+
+```
 ----------- insira isto ----------------
 UUID=6C0D-4530          /boot	        vfat            noauto,noatime	0 2
 UUID=14aa64ea-a2fb-4b77-be9d-1d61faeeac1a	/	ext4	noatime	0 1
 UUID=36a8cd7c-3fb7-4766-b3d8-1664031d2195	/var	ext4	noatime 0 2
 UUID=b6584762-0904-45d1-92ab-b2848b538cea	/home	btrfs	noatime 0 2
 ----------- insira isto ----------------
+```
 
 Aplicações:
 
@@ -225,11 +234,13 @@ Configuração de vídeo /etc/selinux/config.
  # nano -w /mnt/gentoo/etc/portage/make.conf
 ```
 
+```
 ---------------------------------------------------------
 ## (For mouse, keyboard, and Synaptics touchpad support)
 INPUT_DEVICES="libinput synaptics"
 VIDEO_CARDS="intel"
 ---------------------------------------------------------
+```
 
 ```
  # emerge --ask --verbose x11-base/xorg-drivers
@@ -242,9 +253,12 @@ VIDEO_CARDS="intel"
 ```
 
 Acrescentar as seguintes flags:
+
+```
 ---------------------------------------------------------
 USE="X gtk dbus policykit alsa acl apm acpi hardened pulseaudio -kde -qt4 -qt5"
 ---------------------------------------------------------
+```
 
 Instalando o D-Bus:
 
@@ -253,9 +267,12 @@ Instalando o D-Bus:
 ```
 
 Definir no make.conf
+
+```
 ---------------------------------------------------------
 XFCE_PLUGINS="brightness clock trash"
 ---------------------------------------------------------
+```
 
 ```
  # eselect profile set default/linux/amd64/17.0/desktop
